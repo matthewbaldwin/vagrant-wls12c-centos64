@@ -1,0 +1,26 @@
+{
+  "name": "biemond-jdk7",
+  "version": "0.3.2",
+  "source": "https://github.com/biemond/puppet/tree/master/modules/jdk7",
+  "author": "Edwin Biemond",
+  "license": "GNU General Public License version 3 of the License",
+  "summary": "Oracle JDK7 puppet module optimized for weblogic urandom rngd entropy",
+  "description": "Oracle JDK7 puppet module with low on entropy fix, you can use the rngd or rng-tools service or set urandom in Java",
+  "project_page": "http://technology.amis.nl/2012/10/13/configure-fmw-servers-with-puppet/",
+  "dependencies": [
+
+  ],
+  "types": [
+
+  ],
+  "checksums": {
+    "COPYING": "d32239bcb673463ab874e80d47fae504",
+    "License": "cb9ee2123496a2f19485dde319d3a5cb",
+    "Modulefile": "50e9ffd5cb05c32afc87464e0994ba1c",
+    "README.md": "42305a6bbd1b89804c908b9e59144975",
+    "manifests/init.pp": "eab493365c6e2390dd5662f9f2b04b52",
+    "manifests/install7.pp": "4b57d406482c3fc58215259b3023747e",
+    "manifests/javaexec.pp": "d38869d40741b74833fe00c140b41913",
+    "manifests/urandomfix.pp": "5b98b74e2701c66c32a93576dcb5b229"
+  }
+}
