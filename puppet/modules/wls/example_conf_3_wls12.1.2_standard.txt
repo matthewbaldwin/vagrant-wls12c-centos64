@@ -1,18 +1,18 @@
-# test
 #
 # one machine setup with weblogic 12.1.2
 # creates an WLS Domain with JAX-WS (advanced , soap)
 # needs jdk7, wls, orautils, fiddyspence-sysctl, erwbgy-limits puppet modules
 #
 
-node 'vagrantcentos64' {
+node 'xxxx.alfa.local' inherits default {
   
-   include os2, wls12, wls12c_domain, orautils
-   Class['os2']  -> Class['wls12'] -> Class['wls12c_domain'] -> Class['orautils']
+   include os_5, wls12_5, wls12c_domain_5, orautils, maintenance_5
+   Class['os_5']  -> Class['wls12_5'] -> Class['wls12c_domain_5'] -> Class['maintenance_5']
 }
 
+
 # operating settings for Middleware
-class os2 {
+class os_5 {
 
   $remove = [ "java-1.7.0-openjdk.x86_64", "java-1.6.0-openjdk.x86_64" ]
 
@@ -20,20 +20,19 @@ class os2 {
     ensure  => absent,
   }
 
-
   include jdk7
 
-  jdk7::install7{ 'jdk1.7.0_45':
-      version              => "7u45" , 
-      fullVersion          => "jdk1.7.0_45",
+  jdk7::install7{ 'jdk1.7.0_40':
+      version              => "7u40" , 
+      fullVersion          => "jdk1.7.0_40",
       alternativesPriority => 18000, 
       x64                  => true,
       downloadDir          => "/data/install",
       urandomJavaFix       => false,
-      sourcePath           => "/vagrant",
+      sourcePath           => "puppet:///modules/jdk7/"
   }
-
-
+  
+  
   class { 'limits':
     config => {
                '*'       => { 'nofile'   => { soft => '2048'   , hard => '8192',   },},
@@ -67,22 +66,18 @@ class os2 {
 
 
 
-class wls12{
+class wls12_5{
 
-  class { 'wls::urandomfix' :}
+  $jdkWls12cJDK = 'jdk1.7.0_40'
 
-  $jdkWls12cJDK = 'jdk1.7.0_45'
-
-  $osOracleHome    = "/oracle"
-  $osMdwHome       = "/oracle/product/Middleware12c"
-  $osWlHome        = "/oracle/product/Middleware12c/wlserver"
+  $osOracleHome    = "/opt/oracle"
+  $osMdwHome       = "/opt/oracle/Middleware12c"
+  $osWlHome        = "/opt/oracle/Middleware12c/wlserver"
   $user            = "oracle"
   $group           = "dba"
   $downloadDir     = "/data/install"
 
-#  $puppetDownloadMntPoint = "puppet:///modules/wls"
-  $puppetDownloadMntPoint = "/vagrant"
-
+  $puppetDownloadMntPoint = "puppet:///middleware/"
 
   # set the wls defaults
   Wls::Installwls {
@@ -102,9 +97,9 @@ class wls12{
 } 
 
 
-class wls12c_domain{
+class wls12c_domain_5{
 
-  $jdkWls12gJDK    = 'jdk1.7.0_45'
+  $jdkWls12gJDK    = 'jdk1.7.0_40'
 
   $wlsDomainName   = "Wls12c"
   $osTemplate      = "standard"
@@ -113,16 +108,23 @@ class wls12c_domain{
   $nodemanagerPort = "5556"
   $address         = "localhost"
 
-  $osOracleHome    = "/oracle"
-  $osMdwHome       = "/oracle/product/Middleware12c"
-  $osWlHome        = "/oracle/product/Middleware12c/wlserver"
+  $osOracleHome    = "/opt/oracle"
+  $osMdwHome       = "/opt/oracle/Middleware12c"
+  $osWlHome        = "/opt/oracle/Middleware12c/wlserver"
 
   $user         = "oracle"
   $group        = "dba"
   $downloadDir  = "/data/install"
   $logDir       = "/data/logs" 
 
-  $userConfigDir = '/home/oracle'
+  case $operatingsystem {
+     CentOS, RedHat, OracleLinux, Ubuntu, Debian: { 
+       $userConfigDir = '/home/oracle'
+     }
+     Solaris: { 
+       $userConfigDir = '/export/home/oracle'
+     }
+   }
 
   # install domain
   wls::wlsdomain{
@@ -139,13 +141,13 @@ class wls12c_domain{
     adminListenPort => $adminListenPort,
     nodemanagerPort => $nodemanagerPort,
     wlsUser         => "weblogic",
-    password        => "welcome1",
+    password        => "weblogic1",
     logDir          => $logDir,
   }
 
   Wls::Nodemanager {
     wlHome       => $osWlHome,
-    fullJDKName  => $jdkWls12gJDK,  
+    fullJDKName  => $jdkWls12gJDK,	
     user         => $user,
     group        => $group,
     serviceName  => $serviceName,  
@@ -156,7 +158,7 @@ class wls12c_domain{
    wls::nodemanager{'nodemanager12c':
      version    => "1212",
      listenPort => $nodemanagerPort,
-     domain     => $wlsDomainName,     
+     domain     => $wlsDomainName,   	 
      require    => Wls::Wlsdomain['wlsDomain12c'],
    }  
  
@@ -179,7 +181,7 @@ class wls12c_domain{
       wlHome        => $osWlHome,
       fullJDKName   => $jdkWls12gJDK,  
       wlsUser       => "weblogic",
-      password      => "welcome1",
+      password      => "weblogic1",
       address       => $address,
       port          => $nodemanagerPort,
       user          => $user,
@@ -189,4 +191,30 @@ class wls12c_domain{
       require       => Wls::Nodemanager['nodemanager12c'],
   }
 
+}
+
+class maintenance_5 {
+
+  case $operatingsystem {
+    CentOS, RedHat, OracleLinux, Ubuntu, Debian: { 
+      $mtimeParam = "1"
+    }
+    Solaris: { 
+      $mtimeParam = "+1"
+    }
+  }
+
+  cron { 'cleanwlstmp' :
+	  command => "find /tmp -name '*.tmp' -mtime ${mtimeParam} -exec rm {} \\; >> /tmp/tmp_purge.log 2>&1",
+	  user    => oracle,
+	  hour    => 06,
+	  minute  => 25,
+  }
+	
+  cron { 'mdwlogs' :
+	  command => "find /opt/oracle/Middleware12c/logs -name 'wlst_*.*' -mtime ${mtimeParam} -exec rm {} \\; >> /tmp/wlst_purge.log 2>&1",
+	  user    => oracle,
+	  hour    => 06,
+	  minute  => 30,
+  }
 }

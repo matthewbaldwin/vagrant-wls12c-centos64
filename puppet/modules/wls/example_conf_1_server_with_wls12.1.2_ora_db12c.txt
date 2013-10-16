@@ -36,15 +36,19 @@ class os2 {
     ensure  => present,
   }
 
-
   include jdk7
 
   jdk7::install7{ 'jdk1.7.0_25':
-    version     =>  "7u25" , 
-    fullVersion =>  "jdk1.7.0_25", 
-    x64         =>  true,
-    downloadDir =>  "/data/install",
+      version              => "7u25" , 
+      fullVersion          => "jdk1.7.0_25",
+      alternativesPriority => 17000, 
+      x64                  => true,
+      downloadDir          => "/data/install",
+      urandomJavaFix       => false,
+      sourcePath           => "puppet:///modules/jdk7/"
   }
+
+
 
   class { 'limits':
     config => {
@@ -151,15 +155,12 @@ class db12c2 {
                    dbName                  => 'test',
                    require                 => Oradb::Dbactions['start testDb'],
    }
-
-
-
-
 }
 
 
 class wls12_adf2{
 
+  class { 'wls::urandomfix' :}
 
   if $jdkWls12cJDK == undef {
     $jdkWls12cJDK = 'jdk1.7.0_25'
@@ -188,7 +189,7 @@ class wls12_adf2{
   
 
   wls::installadf{'adf12c':
-     adfFile      => 'ofm_wls_jrf_generic_12.1.2.0.0_disk1_1of1.zip',
+     adfFile      => 'fmw_infra_121200.jar',
   } 
 
 } 
@@ -316,17 +317,24 @@ class wls12c_adf_domain2{
     password     => hiera('weblogic_password_default'),
 
   }
-  
-  # start AdminServer for configuration
-  wls::wlstexec { 
-    'startWLSAdminServer12c':
-     script      => 'startWlsServer.py',
-     port        =>  $nodemanagerPort,
-     params      =>  ["domain     = '${wlsDomainName}'",
-                      "domainPath = '${osMdwHome}/user_projects/domains/${wlsDomainName}'",
-                      "wlsServer  = 'AdminServer'"],
-     require     => Wls::Nodemanager['nodemanager12c'];
 
+  # start AdminServers for configuration
+  wls::wlscontrol{'startWLSAdminServer12c':
+      wlsDomain     => $wlsDomainName,
+      wlsDomainPath => "${osMdwHome}/user_projects/domains/${wlsDomainName}",
+      wlsServer     => "AdminServer",
+      action        => 'start',
+      wlHome        => $osWlHome,
+      fullJDKName   => $jdkWls12gJDK,  
+      wlsUser       => "weblogic",
+      password      => hiera('weblogic_password_default'),
+      address       => $address,
+      port          => $nodemanagerPort,
+      user          => $user,
+      group         => $group,
+      downloadDir   => $downloadDir,
+      logOutput     => true, 
+      require       => Wls::Nodemanager['nodemanager12c'],
   }
 
   # create Server template for Dynamic Clusters 
@@ -338,7 +346,7 @@ class wls12c_adf_domain2{
      params        =>  ["server_template_name          = 'serverTemplateCluster'",
                         "server_template_listen_port   = 7100",
                         "dynamic_server_name_arguments ='-XX:PermSize=128m -XX:MaxPermSize=256m -Xms512m -Xmx1024m'"],
-     require       => Wls::Wlstexec['startWLSAdminServer12c'];
+     require       => Wls::Wlscontrol['startWLSAdminServer12c'];
   }
 
   # create Dynamic Cluster 

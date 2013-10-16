@@ -8,7 +8,7 @@
 # enough is generated.
 #
 # three options
-#  use rngd service (this class)vagrant 
+#  use rngd service (this class)
 #  set java.security in JDK ( jre/lib/security )
 #  set -Djava.security.egd=file:/dev/./urandom param
 #
