@@ -4,7 +4,6 @@
 node 'devagent40.alfa.local' inherits default {
 
    include os3, wls2, wls_domain2, wls_cluster2
-   include orautils
    Class['os3'] -> Class['wls2'] -> Class['wls_domain2'] -> Class['wls_cluster2']
 
 }
@@ -12,7 +11,6 @@ node 'devagent40.alfa.local' inherits default {
 node 'devagent41.alfa.local' inherits default {
 
    include os3, wls2 
-   include orautils
    include wls_copydomain2
    Class['os3'] -> Class['wls2'] -> Class['wls_copydomain2'] 
 
@@ -91,6 +89,24 @@ class wls2{
 
   class { 'wls::urandomfix' :}
 
+  class{'orautils':
+        osOracleHomeParam      => "/opt/oracle/wls",
+        oraInventoryParam      => "/opt/oracle/wls/oraInventory",
+        osDomainTypeParam      => "admin",
+        osLogFolderParam       => "/data/logs",
+        osDownloadFolderParam  => "/data/install",
+        osMdwHomeParam         => "/opt/oracle/wls/Middleware11gR1",
+        osWlHomeParam          => "/opt/oracle/wls/Middleware11gR1/wlserver_10.3",
+        oraUserParam           => "oracle",
+        osDomainParam          => "WlsDomain",
+        osDomainPathParam      => "/opt/oracle/wls/Middleware11gR1/user_projects/domains/WlsDomain",
+        nodeMgrPathParam       => "/opt/oracle/wls/Middleware11gR1/wlserver_10.3/server/bin",
+        nodeMgrPortParam       => 5556,
+        wlsUserParam           => "weblogic",
+        wlsPasswordParam       => "weblogic1",
+        wlsAdminServerParam    => "AdminServer",
+  } 
+
                        
   $puppetDownloadMntPoint = "puppet:///middleware/"
                     
@@ -103,7 +119,7 @@ class wls2{
        $user         = "oracle"
        $group        = "dba"
        $downloadDir  = "/data/install"
-       $logsDir      = "/data/logs"       
+       $logDir      = "/data/logs"       
      }
      windows: { 
        $osOracleHome = "c:/oracle/middleware"
@@ -113,7 +129,7 @@ class wls2{
        $group        = "Administrators"
        $serviceName  = "C_oracle_middleware_wls11g_wlserver_10.3"
        $downloadDir  = "c:/temp"
-       $logsDir      = "c:/oracle/logs" 
+       $logDir      = "c:/oracle/logs" 
      }
   }
 
@@ -190,16 +206,16 @@ class wls2{
   #nodemanager configuration and starting
   wls::nodemanager{'nodemanager11g':
      listenPort  => '5556',
-     logDir      => $logsDir,
+     logDir      => $logDir,
      require     => Wls::Bsupatch['p16619891'],
   }
 
-	orautils::nodemanagerautostart{"autostart weblogic 11g":
-	   version     => "1111",
-	   wlHome      => $osWlHome, 
-	   user        => $user,
+  orautils::nodemanagerautostart{"autostart weblogic 11g":
+	 version     => "1111",
+	 wlHome      => $osWlHome, 
+	 user        => $user,
      require     => Wls::Nodemanager['nodemanager11g'],
-	}
+  }
 
 }
 

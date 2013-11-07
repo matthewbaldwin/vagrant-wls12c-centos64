@@ -290,6 +290,7 @@ def get_domain(name,i,wlsversion)
     end
 
     if FileTest.exists?(domainfile)
+
       file = File.read( domainfile)
       doc = REXML::Document.new file
       root = doc.root
@@ -298,6 +299,32 @@ def get_domain(name,i,wlsversion)
         setcode do
           root.elements['name'].text
         end
+      end
+
+          
+      file = File.read( domainfile)
+      doc = REXML::Document.new file
+      root = doc.root
+
+      Facter.add("#{prefix}_domain_#{n}") do
+        setcode do
+          root.elements['name'].text
+        end
+      end
+				
+
+      if File.directory?(name+'/user_projects/domains/'+domain+'/soa/autodeploy')
+        Facter.add("#{prefix}_domain_#{n}_oim_configured") do
+          setcode do
+            "true"
+          end
+        end        
+      else
+        Facter.add("#{prefix}_domain_#{n}_oim_configured") do
+          setcode do
+            "false"
+          end
+        end        
       end
 
       k = 0
@@ -634,10 +661,25 @@ def get_domain(name,i,wlsversion)
           end
         end
 
+
+
         subfile = File.read( name+'/user_projects/domains/'+domain+"/config/" + jmsresource.elements['descriptor-file-name'].text )
         subdoc = REXML::Document.new subfile
 
         jmsroot = subdoc.root
+
+        jmsmoduleQuotaStr = "" 
+        jmsroot.elements.each("quota") do |qu| 
+          jmsmoduleQuotaStr +=  qu.attributes["name"] + ";"
+        end
+
+        Facter.add("#{prefix}_domain_#{n}_jmsmodule_#{k}_quotas") do
+          setcode do
+            jmsmoduleQuotaStr
+          end
+        end
+
+
         jmsroot.elements.each("connection-factory") do |cfs| 
           jmsstr +=  cfs.attributes["name"] + ";"
         end

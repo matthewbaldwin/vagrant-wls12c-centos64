@@ -2,13 +2,17 @@
 #
 # Weblogic Server control, starts or stops a managed server
 #
-#  action = start|stop
+#  action        = start|stop
+#  wlsServerType = admin|managed
+#  wlsTarget     = Server|Cluster
 #
 define wls::wlscontrol
 ( $wlHome         = undef,
   $fullJDKName    = undef,
   $wlsDomain      = undef,
   $wlsDomainPath  = undef,
+  $wlsServerType  = 'admin',
+  $wlsTarget      = 'Server',
   $wlsServer      = 'AdminServer',
   $address        = 'localhost',
   $port           = '7001',
@@ -41,12 +45,22 @@ define wls::wlscontrol
      }
    }
 
-   if $action == 'start' {
-      $script = 'startWlsServer2.py'
-   } elsif $action == 'stop' {
-      $script = 'stopWlsServer2.py'
+   if $wlsServerType == 'admin' {
+     if $action == 'start' {
+        $script = 'startWlsServer2.py'
+     } elsif $action == 'stop' {
+        $script = 'stopWlsServer2.py'
+     } else {
+        fail("Unknow action")
+     }
    } else {
-      fail("Unknow action")
+     if $action == 'start' {
+        $script = 'startWlsManagedServer2.py'
+     } elsif $action == 'stop' {
+        $script = 'stopWlsManagedServer2.py'
+     } else {
+        fail("Unknow action")
+     }
    }
 
    # the py script used by the wlst
@@ -74,6 +88,7 @@ define wls::wlscontrol
           user        => $user,
           group       => $group,
           logoutput   => $logOutput,
+          timeout     => 0,
          }
        } elsif $action == 'stop' {
          exec { "execwlst ${title}${script} ":
@@ -86,6 +101,7 @@ define wls::wlscontrol
           user        => $user,
           group       => $group,
           logoutput   => $logOutput,
+          timeout     => 0,
          }
        }
      }
@@ -96,9 +112,8 @@ define wls::wlscontrol
                           "JAVA_HOME=${JAVA_HOME}"],
           require     => File["${path}/${title}${script}"],
           path        => $execPath,
-          user        => $user,
-          group       => $group,
           logoutput   => $logOutput,
+          timeout     => 0,
         }
      }
    }
