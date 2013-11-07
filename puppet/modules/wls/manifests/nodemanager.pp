@@ -142,7 +142,11 @@ if $version == "1212" {
 
          }
          windows: {
-
+		        service { "window nodemanager initial start ${title}":
+		                name       => "Oracle Weblogic ${domain} NodeManager (${serviceName})",
+		                enable     => true,
+		                ensure     => true,
+		        }
          }
       }
 }
@@ -151,17 +155,21 @@ elsif $version == "1111" {
       # create all folders
       case $operatingsystem {
          CentOS, RedHat, OracleLinux, Ubuntu, Debian, SLES, Solaris: {
+            if ! defined(Exec["create ${logDir} directory"]) {
              exec { "create ${logDir} directory":
                      command => "mkdir -p ${logDir}",
                      unless  => "test -d ${logDir}",
                      user    => 'root',
              }
+           }
          }
          windows: {
       	   $logDirWin = slash_replace( $logDir )
-           exec { "create ${logDir} directory":
+           if ! defined(Exec["create ${logDir} directory"]) {
+             exec { "create ${logDir} directory":
                   command => "${checkCommand} mkdir ${logDirWin}",
                   unless  => "${checkCommand} dir ${logDirWin}",
+             }
            }
          }
          default: {
@@ -196,7 +204,7 @@ elsif $version == "1111" {
           command     => "/usr/bin/nohup ${javaCommand} &",
           environment => ["CLASSPATH=${wlHome}/server/lib/weblogic.jar",
                           "JAVA_HOME=${JAVA_HOME}",
-                          "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${wlHome}/server/native/${nativeLib}"],
+                          "LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:${wlHome}/server/native/${nativeLib}"],
           unless      => "${checkCommand}",
           require     => File ["nodemanager.properties ux ${title}"],
         }

@@ -29,14 +29,14 @@ class os2 {
       alternativesPriority => 18000, 
       x64                  => true,
       downloadDir          => "/data/install",
-      urandomJavaFix       => false,
+      urandomJavaFix       => true,
       sourcePath           => "/vagrant",
   }
 
 
   class { 'limits':
     config => {
-               '*'       => { 'nofile'   => { soft => '2048'   , hard => '8192',   },},
+               '*'       => {  'nofile'  => { soft => '2048'   , hard => '8192',   },},
                'oracle'  => {  'nofile'  => { soft => '65536'  , hard => '65536',  },
                                'nproc'   => { soft => '2048'   , hard => '16384',   },
                                'memlock' => { soft => '1048576', hard => '1048576',},
@@ -65,11 +65,7 @@ class os2 {
 
 }
 
-
-
 class wls12{
-
-  class { 'wls::urandomfix' :}
 
   $jdkWls12cJDK = 'jdk1.7.0_45'
 
@@ -80,12 +76,9 @@ class wls12{
   $group           = "dba"
   $downloadDir     = "/data/install"
 
-#  $puppetDownloadMntPoint = "puppet:///modules/wls"
   $puppetDownloadMntPoint = "/vagrant"
 
-
-  # set the wls defaults
-  Wls::Installwls {
+  wls::installwls{'wls12c':
     version                => '1212',
     mdwHome                => $osMdwHome,
     oracleHome             => $osOracleHome,
@@ -95,10 +88,6 @@ class wls12{
     downloadDir            => $downloadDir,
     puppetDownloadMntPoint => $puppetDownloadMntPoint, 
   }
-
-  wls::installwls{'wls12c':
-  } 
-
 } 
 
 
@@ -125,8 +114,7 @@ class wls12c_domain{
   $userConfigDir = '/home/oracle'
 
   # install domain
-  wls::wlsdomain{
-   'wlsDomain12c':
+  wls::wlsdomain{'wlsDomain12c':
     version         => "1212",
     wlHome          => $osWlHome,
     mdwHome         => $osMdwHome,
@@ -151,42 +139,58 @@ class wls12c_domain{
     serviceName  => $serviceName,  
   }
 
-   #nodemanager starting 
-   # in 12c start it after domain creation
-   wls::nodemanager{'nodemanager12c':
-     version    => "1212",
-     listenPort => $nodemanagerPort,
-     domain     => $wlsDomainName,     
-     require    => Wls::Wlsdomain['wlsDomain12c'],
-   }  
+  #nodemanager starting 
+  # in 12c start it after domain creation
+  wls::nodemanager{'nodemanager12c':
+    version    => "1212",
+    listenPort => $nodemanagerPort,
+    domain     => $wlsDomainName,     
+    require    => Wls::Wlsdomain['wlsDomain12c'],
+  }
  
- 
-   orautils::nodemanagerautostart{"autostart ${wlsDomainName}":
-      version     => "1212",
-      wlHome      => $osWlHome, 
-      user        => $user,
-      domain      => $wlsDomainName,
-      logDir      => $logDir,
-      require     => Wls::Nodemanager['nodemanager12c'];
-   }
+  orautils::nodemanagerautostart{"autostart ${wlsDomainName}":
+    version     => "1212",
+    wlHome      => $osWlHome, 
+    user        => $user,
+    domain      => $wlsDomainName,
+    logDir      => $logDir,
+    require     => Wls::Nodemanager['nodemanager12c'];
+  }
 
   # start AdminServers for configuration
   wls::wlscontrol{'startWLSAdminServer12c':
-      wlsDomain     => $wlsDomainName,
-      wlsDomainPath => "${osMdwHome}/user_projects/domains/${wlsDomainName}",
-      wlsServer     => "AdminServer",
-      action        => 'start',
-      wlHome        => $osWlHome,
-      fullJDKName   => $jdkWls12gJDK,  
-      wlsUser       => "weblogic",
-      password      => "welcome1",
-      address       => $address,
-      port          => $nodemanagerPort,
-      user          => $user,
-      group         => $group,
-      downloadDir   => $downloadDir,
-      logOutput     => true, 
-      require       => Wls::Nodemanager['nodemanager12c'],
+    wlsDomain     => $wlsDomainName,
+    wlsDomainPath => "${osMdwHome}/user_projects/domains/${wlsDomainName}",
+    wlsServer     => "AdminServer",
+    action        => 'start',
+    wlHome        => $osWlHome,
+    fullJDKName   => $jdkWls12gJDK,  
+    wlsUser       => "weblogic",
+    password      => "welcome1",
+    address       => $address,
+    port          => $nodemanagerPort,
+    user          => $user,
+    group         => $group,
+    downloadDir   => $downloadDir,
+    logOutput     => true, 
+    require       => Wls::Nodemanager['nodemanager12c'],
   }
 
+  class{'orautils':
+    osOracleHomeParam      => $osOracleHome,
+    oraInventoryParam      => "${osOracleHome}/oraInventory",
+    osDomainTypeParam      => "admin",
+    osLogFolderParam       => $logDir,
+    osDownloadFolderParam  => $downloadDir,
+    osMdwHomeParam         => $osMdwHome,
+    osWlHomeParam          => $osWlHome,
+    oraUserParam           => $user,
+    osDomainParam          => $wlsDomainName,
+    osDomainPathParam      => "${osMdwHome}/user_projects/domains/Wls12c",
+    nodeMgrPathParam       => "${osMdwHome}/user_projects/domains/Wls12c/bin",
+    nodeMgrPortParam       => $nodemanagerPort,
+    wlsUserParam           => "weblogic",
+    wlsPasswordParam       => "welcome1",
+    wlsAdminServerParam    => "AdminServer",
+  }
 }

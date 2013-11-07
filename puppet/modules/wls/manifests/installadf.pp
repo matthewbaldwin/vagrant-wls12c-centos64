@@ -178,7 +178,7 @@ if ( $continue ) {
    case $operatingsystem {
      CentOS, RedHat, OracleLinux, Ubuntu, Debian, SLES: {
 
-        if ($version != "1212" ) {        
+        if ($version != "1212" ) {
           if ! defined(Exec["extract ${adfFile}"]) {
            exec { "extract ${adfFile}":
              command => "unzip ${path}/${adfFile} -d ${path}/adf",
@@ -219,7 +219,7 @@ if ( $continue ) {
      }
      Solaris: {
 
-        if ($version != "1212" ) {        
+        if ($version != "1212" ) {
           if ! defined(Exec["extract ${adfFile}"]) {
            exec { "extract ${adfFile}":
              command => "unzip ${path}/${adfFile} -d ${path}/adf",
@@ -240,7 +240,8 @@ if ( $continue ) {
         } else {
 
 		        exec { "add -d64 oraparam.ini osb":
-		          command => "sed -e's/\[Oracle\]/\[Oracle\]\\\nJRE_MEMORY_OPTIONS=\"-d64\"/g' ${path}/adf/Disk1/install/${adfInstallDir}/oraparam.ini > /tmp/adf.tmp && mv /tmp/adf.tmp ${path}/adf/Disk1/install/${adfInstallDir}/oraparam.ini",
+              command => "sed -e's/\\[Oracle\\]/\\[Oracle\\]\\nJRE_MEMORY_OPTIONS=\"-d64\"/g' ${path}/adf/Disk1/install/${adfInstallDir}/oraparam.ini > /tmp/adf.tmp && mv /tmp/adf.tmp ${path}/adf/Disk1/install/${adfInstallDir}/oraparam.ini",
+#		          command => "sed -e's/\[Oracle\]/\[Oracle\]\\\nJRE_MEMORY_OPTIONS=\"-d64\"/g' ${path}/adf/Disk1/install/${adfInstallDir}/oraparam.ini > /tmp/adf.tmp && mv /tmp/adf.tmp ${path}/adf/Disk1/install/${adfInstallDir}/oraparam.ini",
 		          require => Exec["extract ${adfFile}"],
 		        }
 
@@ -272,41 +273,41 @@ if ( $continue ) {
      }
 
      windows: {
-
-        if ($version != "1212" ) {        
-          if ! defined(Exec["extract ${adfFile}"]) {
-            exec { "extract ${adfFile}":
-              command => "${checkCommand} unzip ${path}/${adfFile} -d ${path}/adf",
-              require => File ["${path}/${adfFile}"],
-              creates => "${path}/adf/Disk1",
-              cwd     => $path,
-            }
-          }
-        }
-
-        exec {"icacls adf disk ${title}":
-           command    => "${checkCommand} icacls ${path}\\adf\\* /T /C /grant Administrator:F Administrators:F",
-           logoutput  => false,
-           require    => Exec["extract ${adfFile}"],
-        }
-
+ 
         if ($version == "1212" ) {
+          exec {"icacls adf disk ${title}":
+            command    => "${checkCommand} icacls ${path}\\${adfFile} /T /C /grant Administrator:F Administrators:F",
+            logoutput  => false,
+            require    => Exec["extract ${adfFile}"],
+          }
+
           exec { "install adf ${title}":
-            command     => "${checkCommand} java -jar ${path}/${adfFileJar} ${command} -ignoreSysPrereqs",
+            command     => "${checkCommand} java -jar ${path}/${adfFile} ${command} -ignoreSysPrereqs",
             require     => [Exec["icacls adf disk ${title}"],File ["${path}/${title}silent_adf.xml"],File["${path}/${adfFile}"]],
             timeout     => 0,
           }
         } else {
 
+            if ! defined(Exec["extract ${adfFile}"]) {
+              exec { "extract ${adfFile}":
+                command => "${checkCommand} unzip ${path}/${adfFile} -d ${path}/adf",
+                require => File ["${path}/${adfFile}"],
+                creates => "${path}/adf/Disk1",
+                cwd     => $path,
+              }
+            }
+            exec {"icacls adf disk ${title}":
+              command    => "${checkCommand} icacls ${path}\\adf\\* /T /C /grant Administrator:F Administrators:F",
+              logoutput  => false,
+              require    => Exec["extract ${adfFile}"],
+            }
 		        exec { "install adf ${title}":
 		          command     => "${path}\\adf\\Disk1\\setup.exe ${command} -ignoreSysPrereqs -jreLoc C:\\oracle\\${fullJDKName}",
 		          logoutput   => true,
 		          require     => [Wls::Utils::Defaultusersfolders['create adf home'],Exec["icacls adf disk ${title}"],File ["${path}/${title}silent_adf.xml"],Exec["extract ${adfFile}"]],
 		          creates     => $commonOracleHome,
 		        }
-
         }
-
      }
    }
 }
